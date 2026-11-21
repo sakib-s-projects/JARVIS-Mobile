@@ -193,7 +193,7 @@ public final class OrbitBackupManager {
                 .put("routineTriggers", parseArray("Routine triggers", RoutineTriggerStore.backupJson(c)))
                 .put("reminders", parseArray("reminders", ReminderStore.backupJson(c)))
                 .put("siteTasks", parseArray("site tasks", SiteTaskStore.backupJson(c)))
-                .put("savedPlaces, parseArray("saved places", SavedPlaceStore.backupJson(c)))
+                .put("savedPlaces", parseArray("saved places", SavedPlaceStore.backupJson(c)))
                 .put("appProfiles", parseArray("app profiles", AppProfileStore.backupJson(c)))
                 .put("notificationConfiguration", NotificationStore.backupConfiguration(c))
                 .put("extensions", OrbitExtensionStore.backupJson(c))
