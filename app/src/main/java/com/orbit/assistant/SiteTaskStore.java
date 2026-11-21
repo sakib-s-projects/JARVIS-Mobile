@@ -25,21 +25,31 @@ public final class SiteTaskStore {
         public final long createdAt;
         public final boolean completed;
         public final long completedAt;
+        public final String reminderId;
+        public final long reminderAt;
 
         public Task(String id, String title, String note, long createdAt,
                    boolean completed, long completedAt) {
+            this(id, title, note, createdAt, completed, completedAt, "", 0L);
+        }
+
+        public Task(String id, String title, String note, long createdAt,
+                   boolean completed, long completedAt, String reminderId, long reminderAt) {
             this.id = id == null ? "" : id.trim();
             this.title = title == null ? "" : title.trim();
             this.note = note == null ? "" : note.trim();
             this.createdAt = createdAt;
             this.completed = completed;
             this.completedAt = completed ? Math.max(0L, completedAt) : 0L;
+            this.reminderId = reminderId == null ? "" : reminderId.trim();
+            this.reminderAt = this.reminderId.isEmpty() ? 0L : Math.max(0L, reminderAt);
         }
 
         JSONObject toJson() throws Exception {
             return new JSONObject().put("id", id).put("title", title).put("note", note)
                     .put("createdAt", createdAt).put("completed", completed)
-                    .put("completedAt", completedAt);
+                    .put("completedAt", completedAt).put("reminderId", reminderId)
+                    .put("reminderAt", reminderAt);
         }
 
         static Task fromJson(JSONObject o) {
@@ -49,7 +59,8 @@ public final class SiteTaskStore {
             if (id.isEmpty() || title.isEmpty()) return null;
             boolean done = o.optBoolean("completed", false);
             return new Task(id, title, o.optString("note", ""), o.optLong("createdAt", 0L),
-                    done, o.optLong("completedAt", 0L));
+                    done, o.optLong("completedAt", 0L), o.optString("reminderId", ""),
+                    o.optLong("reminderAt", 0L));
         }
     }
 
@@ -93,7 +104,8 @@ public final class SiteTaskStore {
         for (Task task : list(c)) {
             if (id.equals(task.id)) {
                 return upsert(c, new Task(task.id, task.title, task.note, task.createdAt,
-                        completed, completed ? System.currentTimeMillis() : 0L));
+                        completed, completed ? System.currentTimeMillis() : 0L,
+                        task.reminderId, task.reminderAt));
             }
         }
         return false;
