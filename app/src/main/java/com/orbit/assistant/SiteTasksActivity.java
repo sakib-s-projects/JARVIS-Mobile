@@ -177,7 +177,7 @@ public final class SiteTasksActivity extends Activity {
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Save", null)
                 .create();
-        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+        UiKit.styleOrbitDialog(dialog, this, false, () -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             String name = title.getText().toString().trim();
             if (name.isEmpty()) {
                 title.setError("Task title required");
@@ -192,7 +192,6 @@ public final class SiteTasksActivity extends Activity {
                 refresh();
             } else Toast.makeText(this, "Could not save task", Toast.LENGTH_SHORT).show();
         }));
-        UiKit.styleOrbitDialog(dialog, this, false);
         dialog.show();
     }
 
