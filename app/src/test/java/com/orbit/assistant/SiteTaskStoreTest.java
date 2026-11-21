@@ -68,12 +68,16 @@ public class SiteTaskStoreTest {
     }
 
     @Test public void backupJsonRestoresTasks() {
-        SiteTaskStore.Task task = SiteTaskStore.create("Backup test", "Site note");
+        SiteTaskStore.Task base = SiteTaskStore.create("Backup test", "Site note");
+        SiteTaskStore.Task task = new SiteTaskStore.Task(base.id, base.title, base.note, base.createdAt,
+                false, 0L, "site-task-" + base.id, System.currentTimeMillis() + 60000L);
         assertTrue(SiteTaskStore.upsert(context, task));
         String backup = SiteTaskStore.backupJson(context);
         assertTrue(SiteTaskStore.remove(context, task.id));
         assertTrue(SiteTaskStore.restoreBackupJson(context, backup));
         assertEquals("Backup test", SiteTaskStore.list(context).get(0).title);
+        assertEquals(task.reminderId, SiteTaskStore.list(context).get(0).reminderId);
+        assertEquals(task.reminderAt, SiteTaskStore.list(context).get(0).reminderAt);
     }
 
     @Test public void restoreRejectsMalformedJsonWithoutChangingExistingData() {
