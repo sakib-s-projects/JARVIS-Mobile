@@ -2,6 +2,8 @@ package com.orbit.assistant;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.text.InputType;
@@ -20,6 +22,7 @@ import android.widget.Toast;
 
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.Calendar;
 import java.util.List;
 
 /** Offline-first site task list. Changes are saved locally as they are made. */
@@ -121,7 +124,12 @@ public final class SiteTasksActivity extends Activity {
         check.setButtonTintList(ColorStateList.valueOf(UiKit.accent(this)));
         check.setChecked(task.completed);
         check.setOnCheckedChangeListener((b, checked) -> {
+            if (checked && !task.reminderId.isEmpty()) ReminderScheduler.cancel(this, task.reminderId);
             SiteTaskStore.setCompleted(this, task.id, checked);
+            if (checked && !task.reminderId.isEmpty()) {
+                SiteTaskStore.upsert(this, new SiteTaskStore.Task(task.id, task.title, task.note,
+                        task.createdAt, true, System.currentTimeMillis(), "", 0L));
+            }
             refresh();
         });
         card.addView(check);
@@ -148,10 +156,20 @@ public final class SiteTasksActivity extends Activity {
                 .setMessage("This task will be removed from the list.")
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Delete", (d, w) -> {
+                    if (!task.reminderId.isEmpty()) ReminderScheduler.cancel(this, task.reminderId);
                     SiteTaskStore.remove(this, task.id);
                     refresh();
                 }).show());
         card.addView(actions);
+        Button reminder = secondaryButton(task.reminderAt > 0L
+                ? "Reminder: " + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+                    .format(new Date(task.reminderAt))
+                : "Set reminder");
+        LinearLayout.LayoutParams reminderLp = new LinearLayout.LayoutParams(-1, UiKit.dp(this, 42));
+        reminderLp.topMargin = UiKit.dp(this, 8);
+        card.addView(reminder, reminderLp);
+        reminder.setEnabled(!task.completed);
+        reminder.setOnClickListener(v -> chooseReminderTime(task));
         return card;
     }
 
@@ -186,13 +204,53 @@ public final class SiteTasksActivity extends Activity {
             SiteTaskStore.Task saved = existing == null
                     ? SiteTaskStore.create(name, note.getText().toString())
                     : new SiteTaskStore.Task(existing.id, name, note.getText().toString(),
-                        existing.createdAt, existing.completed, existing.completedAt);
+                        existing.createdAt, existing.completed, existing.completedAt,
+                        existing.reminderId, existing.reminderAt);
             if (SiteTaskStore.upsert(this, saved)) {
                 dialog.dismiss();
                 refresh();
             } else Toast.makeText(this, "Could not save task", Toast.LENGTH_SHORT).show();
         }));
         dialog.show();
+    }
+
+    private void chooseReminderTime(SiteTaskStore.Task task) {
+        Calendar now = Calendar.getInstance();
+        DatePickerDialog date = new DatePickerDialog(this, (picker, year, month, day) -> {
+            Calendar chosen = Calendar.getInstance();
+            chosen.set(year, month, day, 9, 0, 0);
+            chosen.set(Calendar.MILLISECOND, 0);
+            TimePickerDialog time = new TimePickerDialog(this, (view, hour, minute) -> {
+                chosen.set(Calendar.HOUR_OF_DAY, hour);
+                chosen.set(Calendar.MINUTE, minute);
+                chosen.set(Calendar.SECOND, 0);
+                long trigger = chosen.getTimeInMillis();
+                if (trigger <= System.currentTimeMillis()) {
+                    Toast.makeText(this, "Choose a future time", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                String id = task.reminderId.isEmpty() ? "site-task-" + task.id : task.reminderId;
+                ReminderStore.Item item = new ReminderStore.Item(id, "Site task: " + task.title,
+                        trigger, System.currentTimeMillis());
+                ReminderScheduler.ScheduleResult result = ReminderScheduler.schedule(this, item);
+                if (!result.scheduled) {
+                    Toast.makeText(this, "Could not schedule reminder", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                SiteTaskStore.Task updated = new SiteTaskStore.Task(task.id, task.title, task.note,
+                        task.createdAt, task.completed, task.completedAt, id, trigger);
+                if (!SiteTaskStore.upsert(this, updated)) {
+                    ReminderScheduler.cancel(this, id);
+                    Toast.makeText(this, "Reminder scheduled but task update failed; alarm cancelled", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(this, result.exact ? "Reminder scheduled" : "Approximate reminder scheduled",
+                            Toast.LENGTH_SHORT).show();
+                    refresh();
+                }
+            }, 9, 0, false);
+            time.show();
+        }, now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH));
+        date.show();
     }
 
     private TextView section(String text) {
