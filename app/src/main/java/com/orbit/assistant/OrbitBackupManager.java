@@ -191,7 +191,8 @@ public final class OrbitBackupManager {
                 .put("customCommands", parseArray("Custom Commands", CustomCommandStore.backupJson(c)))
                 .put("routineTriggers", parseArray("Routine triggers", RoutineTriggerStore.backupJson(c)))
                 .put("reminders", parseArray("reminders", ReminderStore.backupJson(c)))
-                .put("savedPlaces", parseArray("saved places", SavedPlaceStore.backupJson(c)))
+                .put("siteTasks", parseArray("site tasks", SiteTaskStore.backupJson(c)))
+                .put("savedPlaces, parseArray("saved places", SavedPlaceStore.backupJson(c)))
                 .put("appProfiles", parseArray("app profiles", AppProfileStore.backupJson(c)))
                 .put("notificationConfiguration", NotificationStore.backupConfiguration(c))
                 .put("extensions", OrbitExtensionStore.backupJson(c))
@@ -217,6 +218,7 @@ public final class OrbitBackupManager {
             ok &= CustomCommandStore.restoreBackupJson(c, optionalArray(data, "customCommands").toString());
             ok &= RoutineTriggerStore.restoreBackupJson(c, data.getJSONArray("routineTriggers").toString());
             ok &= ReminderStore.restoreBackupJson(c, data.getJSONArray("reminders").toString());
+            ok &= SiteTaskStore.restoreBackupJson(c, optionalArray(data, "siteTasks").toString());
             ok &= SavedPlaceStore.restoreBackupJson(c, data.getJSONArray("savedPlaces").toString());
             ok &= AppProfileStore.restoreBackupJson(c, data.getJSONArray("appProfiles").toString());
             ok &= NotificationStore.restoreBackupConfiguration(c, data.getJSONObject("notificationConfiguration"));
@@ -241,6 +243,7 @@ public final class OrbitBackupManager {
         JSONArray customCommands = optionalArray(data, "customCommands");
         JSONArray triggers = requiredArray(data, "routineTriggers");
         JSONArray reminders = requiredArray(data, "reminders");
+        JSONArray siteTasks = optionalArray(data, "siteTasks");
         JSONArray places = requiredArray(data, "savedPlaces");
         JSONArray profiles = requiredArray(data, "appProfiles");
         JSONObject notifications = data.optJSONObject("notificationConfiguration");
@@ -258,6 +261,7 @@ public final class OrbitBackupManager {
         validateCustomCommands(customCommands);
         validateTriggers(triggers, routineIds);
         validateReminders(reminders);
+        validateSiteTasks(siteTasks);
         validatePlaces(places);
         validateProfiles(profiles);
         validateNotifications(notifications);
@@ -343,6 +347,20 @@ public final class OrbitBackupManager {
             }
         }
         if (referenced.size() != decoded.size()) invalid("Vault images");
+    }
+
+    private static void validateSiteTasks(JSONArray tasks) throws Exception {
+        if (tasks.length() > 500) invalid("site tasks");
+        Set<String> ids = new HashSet<>();
+        for (int i = 0; i < tasks.length(); i++) {
+            JSONObject task = tasks.optJSONObject(i);
+            if (task == null || !addUnique(ids, task.optString("id", "")) ||
+                    task.optString("title", "").trim().isEmpty() ||
+                    task.optString("title", "").length() > 500 ||
+                    task.optString("note", "").length() > 10000 ||
+                    task.optLong("createdAt", 0L) < 0 ||
+                    task.optLong("completedAt", 0L) < 0) invalid("site tasks");
+        }
     }
 
     private static Set<String> validateConversations(JSONArray a) throws Exception {
