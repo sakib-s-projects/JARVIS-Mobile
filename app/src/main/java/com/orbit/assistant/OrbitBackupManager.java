@@ -66,7 +66,8 @@ public final class OrbitBackupManager {
                     data.optJSONArray("memories").length() + " memories, " +
                     data.optJSONArray("routines").length() + " routines and " +
                     optionalArray(data, "customCommands").length() + " Custom Commands, and " +
-                    data.optJSONArray("reminders").length() + " reminders, plus " +
+                    data.optJSONArray("reminders").length() + " reminders and " +
+                optionalArray(data, "siteTasks").length() + " site tasks, plus " +
                     optionalArray(data, "extensions").length() + " extensions and " +
                     optionalArray(data, "vault").length() + " saved Vault items.\n\n" +
                     "Restoring will replace Orbit's backed-up local data on this device. " +
