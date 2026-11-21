@@ -780,6 +780,10 @@ public class SettingsActivity extends Activity implements UiKit.AppearanceListen
                 13, UiKit.MUTED, false);
         remindersHelp.setPadding(0, 0, 0, UiKit.dp(this, 12));
         remindersCard.addView(remindersHelp);
+        Button manageSiteTasks = secondaryButton("Manage site tasks");
+        manageSiteTasks.setOnClickListener(v -> startActivity(new Intent(this, SiteTasksActivity.class)));
+        remindersCard.addView(manageSiteTasks, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, UiKit.dp(this, 48)));
         Button manageReminders = secondaryButton("Manage Orbit reminders");
         manageReminders.setOnClickListener(v -> startActivity(new Intent(this, RemindersActivity.class)));
         remindersCard.addView(manageReminders, new LinearLayout.LayoutParams(
