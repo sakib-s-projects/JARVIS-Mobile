@@ -331,6 +331,7 @@
             android:enableOnBackInvokedCallback="true" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".LocationTriggerEditorActivity"
             android:enableOnBackInvokedCallback="true" android:exported="false" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".SiteTasksActivity" android:exported="false" />
         <activity android:name=".RemindersActivity"
             android:enableOnBackInvokedCallback="true" android:exported="false" />
         <activity android:name=".SavedPlacesActivity"
