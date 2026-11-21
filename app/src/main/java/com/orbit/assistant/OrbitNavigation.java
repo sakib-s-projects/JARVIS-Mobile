@@ -93,6 +93,7 @@ public final class OrbitNavigation {
         put(NotificationsActivity.class, Policy.PREDICTIVE, "Notifications");
         put(SavedPlacesActivity.class, Policy.PREDICTIVE, "Saved places");
         put(RemindersActivity.class, Policy.PREDICTIVE, "Reminders");
+        put(SiteTasksActivity.class, Policy.PREDICTIVE, "Site tasks");
         put(RoutinesActivity.class, Policy.PREDICTIVE, "Routines");
         put(RoutineTemplatesActivity.class, Policy.PREDICTIVE, "Routine templates");
         put(RoutineTriggersActivity.class, Policy.PREDICTIVE, "Routine triggers");
