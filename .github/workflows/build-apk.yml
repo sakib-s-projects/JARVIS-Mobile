@@ -3,7 +3,7 @@ name: Build Orbit APK
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ main, jarvis-branding ]
 
 permissions:
   contents: read
