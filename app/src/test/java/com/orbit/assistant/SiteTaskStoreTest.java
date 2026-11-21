@@ -76,7 +76,28 @@ public class SiteTaskStoreTest {
         assertEquals("Backup test", SiteTaskStore.list(context).get(0).title);
     }
 
-    @Test public void restoreRejectsMalformedJson() {
+    @Test public void restoreRejectsMalformedJsonWithoutChangingExistingData() {
+        SiteTaskStore.Task saved = SiteTaskStore.create("Keep this task", "Preserve");
+        assertTrue(SiteTaskStore.upsert(context, saved));
         assertFalse(SiteTaskStore.restoreBackupJson(context, "{bad json"));
+        assertEquals("Keep this task", SiteTaskStore.list(context).get(0).title);
+    }
+
+    @Test public void storeRejectsEmptyTitle() {
+        SiteTaskStore.Task blank = SiteTaskStore.create("   ", "");
+        assertFalse(SiteTaskStore.upsert(context, blank));
+        assertTrue(SiteTaskStore.list(context).isEmpty());
+    }
+
+    @Test public void storeCapsTaskCountAndKeepsRecentTasks() {
+        SiteTaskStore.Task newest = null;
+        for (int i = 0; i < 505; i++) {
+            SiteTaskStore.Task task = SiteTaskStore.create("Task " + i, "");
+            assertTrue(SiteTaskStore.upsert(context, task));
+            if (i == 504) newest = task;
+        }
+        assertEquals(500, SiteTaskStore.list(context).size());
+        assertNotNull(newest);
+        assertTrue(SiteTaskStore.list(context).stream().anyMatch(t -> t.id.equals(newest.id)));
     }
 }
