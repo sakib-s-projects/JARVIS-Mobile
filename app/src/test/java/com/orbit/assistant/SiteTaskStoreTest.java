@@ -1,31 +1,82 @@
 package com.orbit.assistant;
 
-import org.junit.Test;
 import static org.junit.Assert.*;
 
-/** Basic lifecycle-independent checks for the durable task model. */
+import android.content.Context;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
+
+import java.util.List;
+
+/** Robolectric checks for persistence and task state changes. */
+@RunWith(RobolectricTestRunner.class)
 public class SiteTaskStoreTest {
-    @Test public void newTaskStartsIncomplete() {
+    private Context context;
+
+    @Before public void setUp() {
+        context = RuntimeEnvironment.getApplication();
+        context.getSharedPreferences("jarvis_site_tasks_v1", Context.MODE_PRIVATE)
+                .edit().clear().commit();
+    }
+
+    @Test public void newTaskStartsIncompleteAndCanBeSaved() {
         SiteTaskStore.Task t = SiteTaskStore.create("Pour concrete", "Column C2");
         assertFalse(t.completed);
         assertEquals(0L, t.completedAt);
-        assertEquals("Pour concrete", t.title);
+        assertTrue(SiteTaskStore.upsert(context, t));
+        List<SiteTaskStore.Task> items = SiteTaskStore.list(context);
+        assertEquals(1, items.size());
+        assertEquals("Pour concrete", items.get(0).title);
+        assertEquals("Column C2", items.get(0).note);
     }
 
-    @Test public void completedTaskCarriesTimestamp() {
-        long stamp = 12345L;
-        SiteTaskStore.Task t = new SiteTaskStore.Task("id", "Task", "", 100L, true, stamp);
-        assertTrue(t.completed);
-        assertEquals(stamp, t.completedAt);
+    @Test public void completionCanBeToggledAndReopened() {
+        SiteTaskStore.Task t = SiteTaskStore.create("Install rebar", "");
+        assertTrue(SiteTaskStore.upsert(context, t));
+        assertTrue(SiteTaskStore.setCompleted(context, t.id, true));
+        SiteTaskStore.Task done = SiteTaskStore.list(context).get(0);
+        assertTrue(done.completed);
+        assertTrue(done.completedAt > 0L);
+        assertTrue(SiteTaskStore.setCompleted(context, t.id, false));
+        SiteTaskStore.Task reopened = SiteTaskStore.list(context).get(0);
+        assertFalse(reopened.completed);
+        assertEquals(0L, reopened.completedAt);
     }
 
-    @Test public void completionTimestampIsClearedWhenReopened() {
-        SiteTaskStore.Task t = new SiteTaskStore.Task("id", "Task", "", 100L, false, 9876L);
-        assertEquals(0L, t.completedAt);
+    @Test public void editUsesSameIdAndDoesNotDuplicate() {
+        SiteTaskStore.Task original = SiteTaskStore.create("Check formwork", "");
+        assertTrue(SiteTaskStore.upsert(context, original));
+        SiteTaskStore.Task edited = new SiteTaskStore.Task(original.id, "Check formwork C3",
+                "Before casting", original.createdAt, false, 0L);
+        assertTrue(SiteTaskStore.upsert(context, edited));
+        assertEquals(1, SiteTaskStore.list(context).size());
+        assertEquals("Check formwork C3", SiteTaskStore.list(context).get(0).title);
     }
 
-    @Test public void blankTitleIsTrimmedAndRejectedByStoreContract() {
-        SiteTaskStore.Task t = SiteTaskStore.create("  ", "note");
-        assertEquals("", t.title);
+    @Test public void removeOnlySelectedTask() {
+        SiteTaskStore.Task first = SiteTaskStore.create("Task A", "");
+        SiteTaskStore.Task second = SiteTaskStore.create("Task B", "");
+        assertTrue(SiteTaskStore.upsert(context, first));
+        assertTrue(SiteTaskStore.upsert(context, second));
+        assertTrue(SiteTaskStore.remove(context, first.id));
+        assertEquals(1, SiteTaskStore.list(context).size());
+        assertEquals(second.id, SiteTaskStore.list(context).get(0).id);
+    }
+
+    @Test public void backupJsonRestoresTasks() {
+        SiteTaskStore.Task task = SiteTaskStore.create("Backup test", "Site note");
+        assertTrue(SiteTaskStore.upsert(context, task));
+        String backup = SiteTaskStore.backupJson(context);
+        assertTrue(SiteTaskStore.remove(context, task.id));
+        assertTrue(SiteTaskStore.restoreBackupJson(context, backup));
+        assertEquals("Backup test", SiteTaskStore.list(context).get(0).title);
+    }
+
+    @Test public void restoreRejectsMalformedJson() {
+        assertFalse(SiteTaskStore.restoreBackupJson(context, "{bad json"));
     }
 }
