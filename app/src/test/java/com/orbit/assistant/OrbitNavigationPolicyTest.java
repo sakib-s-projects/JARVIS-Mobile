@@ -47,7 +47,7 @@ public final class OrbitNavigationPolicyTest {
             "DeckActivity",
             "SettingsActivity", "ChatActivity", "DiagnosticsActivity", "AiProvidersActivity",
             "LocalAiActivity", "CapabilitiesActivity", "MemoryActivity", "AppsActivity",
-            "NotificationsActivity", "SavedPlacesActivity", "RemindersActivity",
+            "NotificationsActivity", "SavedPlacesActivity", "RemindersActivity", "SiteTasksActivity",
             // Vault and one saved item are ordinary pages: Chats is under the Vault, the Vault is
             // under an item, and both write every change as it is confirmed.
             "OrbitVaultActivity", "OrbitVaultItemActivity", "OrbitVaultPickerActivity",
