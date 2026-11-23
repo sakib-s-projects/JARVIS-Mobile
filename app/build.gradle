@@ -230,6 +230,6 @@ tasks.register("verifyBouncyCastleRuntimeVersions") {
     }
 }
 
-tasks.named("testDebugUnitTest").configure {
+tasks.matching { it.name == "testDebugUnitTest" }.configureEach {
     dependsOn("verifyBouncyCastleRuntimeVersions")
 }

@@ -439,8 +439,8 @@ public final class AskOrbitProcessTextTest {
     }
 
     /** The menu label is short and names Orbit. */
-    @Test public void themenuLabelIsAskOrbit() {
-        assertEquals("Ask Orbit", context.getString(R.string.process_text_label));
+    @Test public void theMenuLabelIsAskJarvis() {
+        assertEquals("Ask JARVIS", context.getString(R.string.process_text_label));
         String manifest = ComponentUninstallTest.readRepositoryFile(
                 "app/src/main/AndroidManifest.xml");
         int start = manifest.indexOf("ProcessTextToOrbitActivity");

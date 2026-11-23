@@ -340,12 +340,12 @@ public final class LeloEasterEggTest {
     }
 
     /** It is a title and a line of text. It does not rename Orbit. */
-    @Test public void orbitsIdentityIsUnchanged() {
+    @Test public void jarvisIdentityIsUnchanged() {
         assertEquals("com.orbit.assistant", BuildConfig.APPLICATION_ID);
         String strings = ComponentUninstallTest.readRepositoryFile(
                 "app/src/main/res/values/strings.xml");
         assertTrue("the app name is still Orbit's",
-                strings.contains("<string name=\"app_name\">Orbit Assistant</string>"));
+                strings.contains("<string name=\"app_name\">JARVIS Assistant</string>"));
         assertFalse("and nothing in resources knows about Lelo",
                 strings.contains("Lelo"));
     }
