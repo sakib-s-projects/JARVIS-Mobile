@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.List;
 import java.util.UUID;
 
 /** Private on-device storage for optional screen thumbnails and temporary request images. */
@@ -69,6 +70,25 @@ public final class AttachmentStore {
     public static void deleteAll(java.util.List<String> paths) {
         if (paths == null) return;
         for (String path : paths) delete(path);
+    }
+
+    /**
+     * Deletes only files under the dedicated pending-request directory. Stale preference data
+     * must never turn retention cleanup into a delete outside Orbit's own attachment cache.
+     */
+    public static void deletePendingScreens(Context context, List<String> paths) {
+        if (context == null || paths == null) return;
+        try {
+            File root = new File(context.getFilesDir(), "orbit_attachments/pending").getCanonicalFile();
+            String prefix = root.getPath() + File.separator;
+            for (String path : paths) {
+                if (path == null || path.trim().isEmpty()) continue;
+                try {
+                    File candidate = new File(path).getCanonicalFile();
+                    if (candidate.getPath().startsWith(prefix) && candidate.isFile()) candidate.delete();
+                } catch (Exception ignored) {}
+            }
+        } catch (Exception ignored) {}
     }
 
     /**
