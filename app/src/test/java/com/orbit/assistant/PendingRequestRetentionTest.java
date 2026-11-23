@@ -1,7 +1,6 @@
 package com.orbit.assistant;
 
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
@@ -41,7 +40,7 @@ public final class PendingRequestRetentionTest {
                 "retention-conversation", "Retry this request", "",
                 screenshot.getAbsolutePath(), false, false,
                 AiSelections.FALLBACK, false, "");
-        assertNotNull(item);
+        assertTrue(item != null);
         PendingRequestStore.markFailed(context, item.id, "Temporary provider failure");
 
         // Move only the terminal record's retention timestamp beyond the seven-day cutoff.
@@ -58,6 +57,6 @@ public final class PendingRequestRetentionTest {
                 false, false, AiSelections.FALLBACK, false, "");
 
         assertFalse("an expired request must not leave its screenshot behind", screenshot.exists());
-        assertNotNull(PendingRequestStore.load(context, item.id));
+        assertTrue(PendingRequestStore.load(context, item.id) == null);
     }
 }
