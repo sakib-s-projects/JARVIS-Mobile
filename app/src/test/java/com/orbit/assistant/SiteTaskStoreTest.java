@@ -95,8 +95,13 @@ public class SiteTaskStoreTest {
 
     @Test public void storeCapsTaskCountAndKeepsRecentTasks() {
         SiteTaskStore.Task newest = null;
+        // Force a timestamp collision: rapid task creation on a phone can occur within
+        // one millisecond, and the store must still retain the last item inserted.
+        long sameCreatedAt = System.currentTimeMillis();
         for (int i = 0; i < 505; i++) {
-            SiteTaskStore.Task task = SiteTaskStore.create("Task " + i, "");
+            SiteTaskStore.Task base = SiteTaskStore.create("Task " + i, "");
+            SiteTaskStore.Task task = new SiteTaskStore.Task(base.id, base.title, base.note,
+                    sameCreatedAt, false, 0L);
             assertTrue(SiteTaskStore.upsert(context, task));
             if (i == 504) newest = task;
         }
