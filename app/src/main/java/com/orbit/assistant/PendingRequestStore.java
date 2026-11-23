@@ -359,8 +359,27 @@ public final class PendingRequestStore {
 
     private static void trim(List<Item> all) {
         long cutoff = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000;
-        all.removeIf(i -> isTerminal(i.status) && i.updatedAt < cutoff);
-        if (all.size() > 100) all.subList(100, all.size()).clear();
+        List<Item> removed = new ArrayList<>();
+        all.removeIf(i -> {
+            boolean expired = isTerminal(i.status) && i.updatedAt < cutoff;
+            if (expired) removed.add(i);
+            return expired;
+        });
+        if (all.size() > 100) {
+            removed.addAll(all.subList(100, all.size()));
+            all.subList(100, all.size()).clear();
+        }
+
+        // A failed request keeps its private image copies so the user can retry it for seven days.
+        // Once that request is pruned (or evicted by the 100-item cap), remove those files too.
+        // Never delete a path still referenced by another retained request.
+        java.util.Set<String> retainedPaths = new java.util.HashSet<>();
+        for (Item item : all) retainedPaths.addAll(item.screenshotPaths);
+        for (Item item : removed) {
+            for (String path : item.screenshotPaths) {
+                if (!retainedPaths.contains(path)) AttachmentStore.delete(path);
+            }
+        }
     }
 
     private static List<Item> readAll(Context c) {
