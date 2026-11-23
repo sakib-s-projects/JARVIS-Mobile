@@ -223,7 +223,7 @@ public final class PendingRequestStore {
                 trustedTaskContext, false, variantTarget, route);
         List<Item> all = readAll(c);
         all.add(0, item);
-        trim(all);
+        trim(c, all);
         writeAll(c, all);
         return item;
     }
@@ -357,7 +357,7 @@ public final class PendingRequestStore {
         writeAll(c, all);
     }
 
-    private static void trim(List<Item> all) {
+    private static void trim(Context context, List<Item> all) {
         long cutoff = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000;
         List<Item> removed = new ArrayList<>();
         all.removeIf(i -> {
@@ -376,9 +376,11 @@ public final class PendingRequestStore {
         java.util.Set<String> retainedPaths = new java.util.HashSet<>();
         for (Item item : all) retainedPaths.addAll(item.screenshotPaths);
         for (Item item : removed) {
+            List<String> orphaned = new ArrayList<>();
             for (String path : item.screenshotPaths) {
-                if (!retainedPaths.contains(path)) AttachmentStore.delete(path);
+                if (!retainedPaths.contains(path)) orphaned.add(path);
             }
+            AttachmentStore.deletePendingScreens(context, orphaned);
         }
     }
 
