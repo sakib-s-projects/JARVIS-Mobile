@@ -428,7 +428,9 @@ public final class Prefs {
     public static String saveRelaySettings(Context c, String rawUrl, String relayToken) {
         String url = rawUrl == null ? "" : rawUrl.trim();
         if (!url.isEmpty() && !url.startsWith("https://")) return "Use an HTTPS relay URL.";
-        SecureStore.saveRelayToken(c, relayToken == null ? "" : relayToken.trim());
+        if (!SecureStore.saveRelayToken(c, relayToken == null ? "" : relayToken.trim())) {
+            return "Orbit could not securely save the relay access token. Re-enter it and try again.";
+        }
         get(c).edit().putString(BACKEND_URL, url).apply();
         return "";
     }
