@@ -94,7 +94,7 @@ public final class SiteTaskStore {
         for (int i = 0; i < items.size(); i++) {
             if (task.id.equals(items.get(i).id)) { items.set(i, task); found = true; break; }
         }
-        if (!found) items.add(task);
+        if (!found) items.add(0, task);
         while (items.size() > MAX_ITEMS) items.remove(items.size() - 1);
         return write(c, items);
     }
