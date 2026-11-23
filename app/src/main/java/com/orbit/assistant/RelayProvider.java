@@ -83,6 +83,7 @@ final class RelayProvider implements AiProvider {
             try {
                 URL url = new URL(backend.endsWith("/") ? backend + "assistant" : backend + "/assistant");
                 conn = (HttpURLConnection) url.openConnection();
+                HttpConnectionSecurity.applyNoRedirects(conn);
                 conn.setRequestMethod("POST");
                 conn.setConnectTimeout(15000);
                 conn.setReadTimeout(90000);
@@ -185,6 +186,7 @@ final class RelayProvider implements AiProvider {
             try {
                 URL url = new URL(backend.endsWith("/") ? backend + "assistant" : backend + "/assistant");
                 conn = (HttpURLConnection) url.openConnection();
+                HttpConnectionSecurity.applyNoRedirects(conn);
                 conn.setRequestMethod("POST");
                 conn.setConnectTimeout(15000);
                 conn.setReadTimeout(90000);

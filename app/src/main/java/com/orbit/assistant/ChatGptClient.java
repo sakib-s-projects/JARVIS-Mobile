@@ -227,6 +227,7 @@ public final class ChatGptClient {
                     .put("role", "user").put("content", content)));
 
             conn = (HttpURLConnection) new URL(RESPONSES_URL).openConnection();
+            HttpConnectionSecurity.applyNoRedirects(conn);
             conn.setRequestMethod("POST");
             conn.setConnectTimeout(15000);
             conn.setReadTimeout(180000);
@@ -409,6 +410,7 @@ public final class ChatGptClient {
                     selection, explicitAttachment, notificationContext, memoryContext,
                     trustedTaskContext, askForSummary, forceSearch, model, kept, null);
             conn = (HttpURLConnection) new URL(RESPONSES_URL).openConnection();
+            HttpConnectionSecurity.applyNoRedirects(conn);
             conn.setRequestMethod("POST");
             conn.setConnectTimeout(15000);
             conn.setReadTimeout(180000);

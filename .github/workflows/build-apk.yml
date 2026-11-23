@@ -32,6 +32,9 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      - name: Run unit tests
+        run: ./gradlew --no-daemon testDebugUnitTest
+
       - name: Read app version
         id: app_version
         shell: bash
