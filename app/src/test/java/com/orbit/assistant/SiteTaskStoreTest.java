@@ -102,6 +102,7 @@ public class SiteTaskStoreTest {
         }
         assertEquals(500, SiteTaskStore.list(context).size());
         assertNotNull(newest);
-        assertTrue(SiteTaskStore.list(context).stream().anyMatch(t -> t.id.equals(newest.id)));
+        String newestId = newest.id;
+        assertTrue(SiteTaskStore.list(context).stream().anyMatch(t -> t.id.equals(newestId)));
     }
 }
