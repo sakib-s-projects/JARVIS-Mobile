@@ -353,7 +353,7 @@ public final class PendingRequestStore {
                     i.route));
             break;
         }
-        trim(all);
+        trim(c, all);
         writeAll(c, all);
     }
 
