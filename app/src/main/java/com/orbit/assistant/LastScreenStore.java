@@ -79,7 +79,15 @@ public final class LastScreenStore {
     public static synchronized Snapshot load(Context c) {
         SharedPreferences p = c.getSharedPreferences(FILE, Context.MODE_PRIVATE);
         long time = p.getLong("capturedAt", 0);
-        if (time <= 0 || System.currentTimeMillis() - time > MAX_AGE_MS) return null;
+        if (time <= 0 || System.currentTimeMillis() - time > MAX_AGE_MS) {
+            // Expiry is a deletion boundary, not merely a refusal to reuse old context. Remove
+            // the private thumbnail as well as the text/path metadata when an expired snapshot is
+            // next inspected; begin() also clears it on the next assistant invocation.
+            AttachmentStore.delete(p.getString("imagePath", ""));
+            p.edit().remove("text").remove("imagePath").remove("packageName")
+                    .remove("appLabel").remove("capturedAt").apply();
+            return null;
+        }
         String text = p.getString("text", "");
         String path = p.getString("imagePath", "");
         if ((text == null || text.trim().isEmpty()) &&
