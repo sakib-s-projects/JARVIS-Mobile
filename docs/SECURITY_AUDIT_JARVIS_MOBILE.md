@@ -3,7 +3,8 @@
 **Audit date:** 23 November 2026  
 **Repository:** [sakib-s-projects/JARVIS-Mobile](https://github.com/sakib-s-projects/JARVIS-Mobile)  
 **Branch:** `jarvis-branding`  
-**Source reviewed:** `36f3456d0b73b8d5f7adfee669874e6430fc49d2`  
+**Security-relevant source reviewed:** `36f3456d0b73b8d5f7adfee669874e6430fc49d2`  
+**Handover report commit:** `3b6733518b2efa4aecf080042e249cede7c9da1d` (report-only change after the reviewed source)  
 **Overall result:** Source review substantially completed; **not install-ready / no security clearance granted**.
 
 > This is a source-and-build-pipeline audit, not a proof that the application is free of malware. It does not replace testing on a physical Android 10 device, a full resolved-dependency vulnerability scan, or a clean build and signature check of the exact final APK.
@@ -22,7 +23,7 @@ Three concrete local-data / credential hardening changes were made:
 
 A SiteTaskStore ordering/cap edge case was also corrected and tested: equal creation timestamps no longer let a newer insertion be dropped by the item cap.
 
-However, the current branch has not produced a successful post-fix test-and-build run. The latest observed workflow was still in progress at the time of this report; prior runs include both unrelated test failures and Maven Central HTTP 429 dependency-download failures. The build workflow only runs `assembleDebug` after all unit tests pass. The available older APK is from before these fixes and is debug-signed, not signed with the release certificate pinned in source.
+However, the current branch has not produced a successful post-fix test-and-build run. Workflow #18 on the report commit (`3b6733518b2efa4aecf080042e249cede7c9da1d`) was retried; both attempts failed at the unit-test step because Robolectric's `nativeruntime-dist-compat:1.0.18` dependency could not be retrieved from Maven Central (HTTP 429). Main and test Java compilation completed in the retry, but the workflow skipped `assembleDebug` and artifact upload. An earlier run against the immediately preceding source completed 10,089 tests with 15 failures and 42 skips. The available older APK is from before these fixes and is debug-signed, not signed with the release certificate pinned in source.
 
 **Recommendation: DO NOT install this branch as a trusted daily-use or production build yet.** Treat the audit as a useful source review with fixes applied, not as a completed verification of an installable binary.
 
@@ -36,6 +37,7 @@ However, the current branch has not produced a successful post-fix test-and-buil
 | Component exposure | `AndroidManifest.xml`: internal Activities and receivers are `exported=false`; FileProvider is unexported and grants URI permissions only. | Narrow exported surface. |
 | Protected system services | `OrbitVoiceInteractionService` and `OrbitSessionService` require `BIND_VOICE_INTERACTION`; notification listener requires `BIND_NOTIFICATION_LISTENER_SERVICE`; Quick Settings tiles require `BIND_QUICK_SETTINGS_TILE`. | Exported by Android contract, but protected by system signature permissions. |
 | External share/selection entry points | `ShareToOrbitActivity`, `ProcessTextToOrbitActivity` validate MIME/input, stage content behind a private one-use token, and only place content in a composer/Vault after explicit user choice. | These are intentional exported doors, not general-purpose app command endpoints. Shared data is not sent until the user submits it. |
+| Other exported Activities | `MainActivity` is the launcher/ASSIST surface. `ChatGptSignInReturnActivity` accepts only the app's browsable return scheme and ignores incoming URI data; it only returns to the in-memory screen that initiated sign-in. `OrbitWidgetConfigureActivity` accepts `APPWIDGET_CONFIGURE`, rejects an ID not owned by Orbit via `OrbitWidgets.isOwnedConfiguration()`, and edits that widget's configuration. | These additional exported surfaces were reviewed; no arbitrary command or credential-input bridge was identified in them. |
 | File sharing | `app/src/main/res/xml/file_paths.xml` contains narrow cache subpaths; FileProvider is unexported. | No broad filesystem root exposed in reviewed configuration. |
 | Provider destinations | `ApiKeyProviderClient.java` uses fixed Anthropic, xAI and OpenRouter HTTPS endpoints; `RelayProvider.java` requires HTTPS and uses `HttpConnectionSecurity.applyNoRedirects`. | No arbitrary provider URL is accepted for the built-in API-key providers. The user-configured relay remains a user trust decision. |
 | OAuth and provider credentials | `ChatGptBrowserAuth.java`, `OpenRouterAuth.java`: PKCE S256, random state/verifier, loopback callback and state checks. `SecureStore.java`: AES/GCM with Android Keystore for provider/API credentials. | Stronger than ordinary preference storage; credentials are not included in the portable backup settings snapshot. |
@@ -126,7 +128,8 @@ Workflow: [Build Orbit APK](https://github.com/sakib-s-projects/JARVIS-Mobile/ac
 - Run [#8 / 45115503632](https://github.com/sakib-s-projects/JARVIS-Mobile/actions/runs/45115503632), commit `c3153f60907bcfa8bf24f337f7d63a1bde190529`: **10,084 tests completed, 14 failed, 42 skipped**. The SiteTaskStore cap test failure from earlier runs was gone. Remaining failures were in existing AskOrbitProcessText, CalendarActionRouting, ComponentInstallHandoff, LeloEasterEgg, OrbitDialogContract and OrbitNavigationPolicy test suites. They were not treated as security vulnerabilities and were not silenced.
 - Run [#9 / 45115515437](https://github.com/sakib-s-projects/JARVIS-Mobile/actions/runs/45115515437), commit `64301d53cf64ae4590c54f8e332e7ecaa59283ce`: failed resolving Robolectric `nativeruntime-dist-compat:1.0.18`; Maven Central returned HTTP 429 Too Many Requests.
 - Run [#16 / 45116153558](https://github.com/sakib-s-projects/JARVIS-Mobile/actions/runs/45116153558), commit `582577daef830f3ca3236dad1d536fe6955fc976`: again blocked by Maven Central HTTP 429 on `nativeruntime-dist-compat:1.0.18`. The unit-test step failed before test execution; the APK build step was skipped.
-- Run [#17 / 45116165273](https://github.com/sakib-s-projects/JARVIS-Mobile/actions/runs/45116165273), commit `36f3456d0b73b8d5f7adfee669874e6430fc49d2`: latest run observed while this report was prepared; the job was still at `Run unit tests`, with build/upload pending. Recheck the Actions page for its final outcome.
+- Run [#17 / 45116165273](https://github.com/sakib-s-projects/JARVIS-Mobile/actions/runs/45116165273), commit `36f3456d0b73b8d5f7adfee669874e6430fc49d2`: completed **10,089 tests, 15 failed, 42 skipped**. Failures included stale JARVIS-vs-Orbit branding expectations (`AskOrbitProcessTextTest`, `LeloEasterEggTest`), plus `CalendarActionRoutingTest`, `ComponentInstallHandoffTest`, `OrbitDialogContractTest`, `OrbitNavigationPolicyTest`, and `OrbitVaultStoreTest`. These were not dismissed or suppressed; they need diagnosis and a clean rerun.
+- Run [#18 / 45116827770](https://github.com/sakib-s-projects/JARVIS-Mobile/actions/runs/45116827770), report commit `3b6733518b2efa4aecf080042e249cede7c9da1d`: attempt 1 ran 543 test cases and logged 252 test setup failures at Robolectric `MavenArtifactFetcher.java:129` with dependency-download I/O errors. I explicitly retried failed jobs (attempt 2); it then failed before test execution because Maven Central returned **HTTP 429** while downloading `org.robolectric:nativeruntime-dist-compat:1.0.18`. Both production and unit-test Java compilation succeeded in attempt 2. `assembleDebug` and artifact upload were skipped by the workflow gate. The run's artifacts endpoint returned zero artifacts.
 
 The workflow explicitly executes `./gradlew --no-daemon testDebugUnitTest` before `clean assembleDebug`. A test failure or dependency-resolution failure prevents the APK build and upload. No test filter was added and no test was skipped to force an artifact.
 
@@ -169,7 +172,7 @@ Therefore the old artifact was an internally signed **debug** APK, not a release
 
 ## 7. Prioritized next actions before installation
 
-1. Get run #17 (and the report-commit build run) to a completed green result; investigate the 14 pre-existing suite failures and rerun after Maven Central is healthy. Do not bypass tests just to get an APK.
+1. Get a successful test-and-build run from the current source. Investigate the 15 assertion failures recorded in run #17, then rerun when Maven Central is serving Robolectric artifacts. Do not bypass tests just to get an APK.
 2. Confirm whether the JARVIS fork or `lpnovi/Orbit-Assistant` is the authoritative update/release repository. Update updater API/asset origin and OpenRouter attribution only after the owner confirms the intended identity.
 3. Harden updater and Orbit Local redirects with an explicit allowlist of the exact GitHub release/CDN hosts expected for the selected distribution, and add tests for rejected cross-origin HTTPS redirects.
 4. Close the extension DNS rebinding gap by pinning the validated IP at the transport layer while retaining TLS hostname verification and SNI; add loopback/private/link-local/IPv6 and DNS-change tests.
@@ -179,7 +182,7 @@ Therefore the old artifact was an internally signed **debug** APK, not a release
 
 ## 8. Scope and limitations
 
-Reviewed the manifest, build configuration, security-relevant Activities/services/receivers/providers, notification store/listener, provider request and network classes, encrypted credential stores, extension parsing/execution/secrets, routine trigger logic, voice and camera controllers, attachment handling, screen-context and pending-request storage, custom backup/restore paths, updater/component installer, edition-specific update code, and GitHub build/release workflows.
+Reviewed the manifest, build configuration, security-relevant Activities/services/receivers/providers (including the exported sign-in-return and widget-configuration Activities), notification store/listener, provider request and network classes, encrypted credential stores, extension parsing/execution/secrets, routine trigger logic, voice and camera controllers, attachment handling, screen-context and pending-request storage, custom backup/restore paths, updater/component installer, edition-specific update code, and GitHub build/release workflows.
 
 Not performed: a physical Android-device test, dynamic instrumentation, full penetration test, reverse-engineering of a final post-fix APK, a complete transitive SCA/SBOM, verification of private Actions secrets, or inspection of an APK that was not made available. The audit cannot certify the code's entire behavior beyond the paths inspected or guarantee the source repository has not changed after the recorded SHA.
 
