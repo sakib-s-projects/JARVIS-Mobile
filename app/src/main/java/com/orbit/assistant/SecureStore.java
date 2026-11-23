@@ -39,28 +39,49 @@ public final class SecureStore {
 
     private SecureStore() {}
 
-    public static void saveRelayToken(Context c, String value) {
+    /**
+     * Saves the optional relay bearer token using Android Keystore only.
+     *
+     * <p>There is deliberately no plaintext fallback. Legacy plaintext values are migrated by
+     * {@link #loadRelayToken(Context)} when Keystore is available; otherwise they are discarded.
+     */
+    public static boolean saveRelayToken(Context c, String value) {
+        if (c == null) return false;
+        String token = value == null ? "" : value.trim();
+        if (token.isEmpty()) {
+            return Prefs.get(c).edit().remove(RELAY_ENC).remove(RELAY_IV)
+                    .remove(Prefs.BACKEND_TOKEN).commit();
+        }
         try {
-            if (value == null || value.isEmpty()) {
-                Prefs.get(c).edit().remove(RELAY_ENC).remove(RELAY_IV).remove(Prefs.BACKEND_TOKEN).apply();
-                return;
-            }
-            if (!encrypt(c, RELAY_ALIAS, RELAY_ENC, RELAY_IV, value)) {
-                throw new IllegalStateException("Could not persist encrypted relay credentials");
-            }
-            Prefs.get(c).edit().remove(Prefs.BACKEND_TOKEN).apply();
-        } catch (Exception e) {
-            // Compatibility fallback only for the optional relay token. The OpenAI API key is never stored here.
-            Prefs.get(c).edit().putString(Prefs.BACKEND_TOKEN, value == null ? "" : value).apply();
+            if (!encrypt(c, RELAY_ALIAS, RELAY_ENC, RELAY_IV, token)) return false;
+            return Prefs.get(c).edit().remove(Prefs.BACKEND_TOKEN).commit();
+        } catch (Exception ignored) {
+            return false;
         }
     }
 
+    /**
+     * Loads the encrypted relay token. A pre-Keystore plaintext token is migrated once when
+     * encryption succeeds. If this device cannot encrypt it, the plaintext copy is removed and
+     * the caller must ask the user to enter the token again.
+     */
     public static String loadRelayToken(Context c) {
+        if (c == null) return "";
         try {
             String value = decrypt(c, RELAY_ALIAS, RELAY_ENC, RELAY_IV);
             if (!value.isEmpty()) return value;
         } catch (Exception ignored) {}
-        return Prefs.get(c).getString(Prefs.BACKEND_TOKEN, "").trim();
+
+        String legacy = Prefs.get(c).getString(Prefs.BACKEND_TOKEN, "").trim();
+        if (legacy.isEmpty()) return "";
+        try {
+            if (encrypt(c, RELAY_ALIAS, RELAY_ENC, RELAY_IV, legacy)) {
+                if (Prefs.get(c).edit().remove(Prefs.BACKEND_TOKEN).commit()) return legacy;
+            }
+        } catch (Exception ignored) {}
+        // Never return a secret that remains in ordinary SharedPreferences.
+        Prefs.get(c).edit().remove(Prefs.BACKEND_TOKEN).commit();
+        return "";
     }
 
     /**
