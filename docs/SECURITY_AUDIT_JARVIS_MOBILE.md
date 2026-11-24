@@ -4,7 +4,7 @@
 **Repository:** [sakib-s-projects/JARVIS-Mobile](https://github.com/sakib-s-projects/JARVIS-Mobile)  
 **Branch:** `jarvis-branding`  
 **Security-relevant source review baseline:** `36f3456d0b73b8d5f7adfee669874e6430fc49d2`  
-**Current branch HEAD checked:** `004bf21e6c5e3bd360eb49ba92119a07bb345d7c`  
+**Current branch HEAD checked:** `f224c9593346c382d6561b9bedcae302400abb7a` (report-only update after code-bearing revision `004bf21e6c5e3bd360eb49ba92119a07bb345d7c`)  
 **Handover report commit:** `3b6733518b2efa4aecf080042e249cede7c9da1d` (report-only change after the reviewed source)  
 **Overall result:** Source review substantially completed; **not install-ready / no security clearance granted**.
 
@@ -195,13 +195,13 @@ Not performed: a physical Android-device test, dynamic instrumentation, full pen
 
 ## 9. Status update — 24 November 2026
 
-This addendum supersedes the earlier workflow status above where the two differ. The current branch HEAD is `004bf21e6c5e3bd360eb49ba92119a07bb345d7c`. The four commits after the original handover changed the build configuration, two branding-related test expectations, the build workflow's test-report upload, and this report. They did not change the Android runtime Java source reviewed at `36f3456d0b73b8d5f7adfee669874e6430fc49d2`.
+This addendum supersedes the earlier workflow status above where the two differ. The current branch HEAD is `f224c9593346c382d6561b9bedcae302400abb7a`; the latest code-bearing revision tested by CI is `004bf21e6c5e3bd360eb49ba92119a07bb345d7c`. Two subsequent commits only updated this handover document. The four commits after the original handover changed the build configuration, two branding-related test expectations, the build workflow's test-report upload, and this report. They did not change the Android runtime Java source reviewed at `36f3456d0b73b8d5f7adfee669874e6430fc49d2`.
 
 ### Dependency mitigation visible at current HEAD
 
 `app/build.gradle` now applies strict Gradle constraints to `bcprov-jdk15to18`, `bcpkix-jdk15to18`, and `bcutil-jdk15to18` at version **1.86**. This is a meaningful hardening change for the older Bouncy Castle 1.72 dependency declared through PDFBox Android 2.0.27.0: the GitHub Advisory Database lists Bouncy Castle Java modules affected by CVE-2025-8916 below 1.79, and the Debian CVE tracker lists CVE-2026-5588 as fixed in the 1.86 Debian package (the upstream affected range ends before 1.84). The 1.86 strict constraints are above those affected ranges and make Gradle resolution fail rather than silently selecting an older version. See [GHSA-4cx2-fc23-5wg6](https://github.com/advisories/GHSA-4cx2-fc23-5wg6), [Debian CVE-2026-5588 tracker](https://security-tracker.debian.org/tracker/CVE-2026-5588), and [Debian CVE-2025-8916 tracker](https://security-tracker.debian.org/tracker/CVE-2025-8916).
 
-This source-level constraint is **not** a substitute for a generated dependency graph/SBOM or a vulnerability scan of the resolved release runtime classpaths. Those remain outstanding. The main app also still declares `play-services-mlkit-text-recognition:19.0.1`; Google's 26 October 2026 release notes list 19.0.2. No security advisory was identified for that version delta in this audit, so it was not changed as an unverified maintenance update. See [Google ML Kit release notes](https://developers.google.com/ml-kit/release-notes).
+Run #22's log additionally confirms that Gradle executed `verifyBouncyCastleRuntimeVersions` and printed all three components as version 1.86 on `debugRuntimeClasspath`; this is a successful, explicit resolved-version check for the main app's debug runtime graph. It does not cover the separate `:local` runtime graph or replace a generated project-wide SBOM and vulnerability scan of all release classpaths, which remain outstanding. The main app also still declares `play-services-mlkit-text-recognition:19.0.1`; Google's 26 October 2026 release notes list 19.0.2. No security advisory was identified for that version delta in this audit, so it was not changed as an unverified maintenance update. See [Google ML Kit release notes](https://developers.google.com/ml-kit/release-notes).
 
 ### Latest build-and-test result
 
