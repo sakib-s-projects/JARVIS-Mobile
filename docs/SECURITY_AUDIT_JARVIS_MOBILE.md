@@ -1,9 +1,10 @@
 # JARVIS-Mobile Security Audit — Handover Report
 
-**Audit date:** 23 November 2026  
+**Audit date:** 24 November 2026 (status addendum)  
 **Repository:** [sakib-s-projects/JARVIS-Mobile](https://github.com/sakib-s-projects/JARVIS-Mobile)  
 **Branch:** `jarvis-branding`  
-**Security-relevant source reviewed:** `36f3456d0b73b8d5f7adfee669874e6430fc49d2`  
+**Security-relevant source review baseline:** `36f3456d0b73b8d5f7adfee669874e6430fc49d2`  
+**Current branch HEAD checked:** `004bf21e6c5e3bd360eb49ba92119a07bb345d7c`  
 **Handover report commit:** `3b6733518b2efa4aecf080042e249cede7c9da1d` (report-only change after the reviewed source)  
 **Overall result:** Source review substantially completed; **not install-ready / no security clearance granted**.
 
@@ -190,3 +191,52 @@ Reviewed the manifest, build configuration, security-relevant Activities/service
 Not performed: a physical Android-device test, dynamic instrumentation, full penetration test, reverse-engineering of a final post-fix APK, a complete transitive SCA/SBOM, verification of private Actions secrets, or inspection of an APK that was not made available. The audit cannot certify the code's entire behavior beyond the paths inspected or guarantee the source repository has not changed after the recorded SHA.
 
 **Final decision: NOT INSTALL-READY.** Keep the branch for continued work; do not treat the older debug APK or an unverified artifact as a trusted release. The audit report should travel with any source ZIP or handover archive.
+
+
+## 9. Status update — 24 November 2026
+
+This addendum supersedes the earlier workflow status above where the two differ. The current branch HEAD is `004bf21e6c5e3bd360eb49ba92119a07bb345d7c`. The four commits after the original handover changed the build configuration, two branding-related test expectations, the build workflow's test-report upload, and this report. They did not change the Android runtime Java source reviewed at `36f3456d0b73b8d5f7adfee669874e6430fc49d2`.
+
+### Dependency mitigation visible at current HEAD
+
+`app/build.gradle` now applies strict Gradle constraints to `bcprov-jdk15to18`, `bcpkix-jdk15to18`, and `bcutil-jdk15to18` at version **1.86**. This is a meaningful hardening change for the older Bouncy Castle 1.72 dependency declared through PDFBox Android 2.0.27.0: the GitHub Advisory Database lists Bouncy Castle Java modules affected by CVE-2025-8916 below 1.79, and the Debian CVE tracker lists CVE-2026-5588 as fixed in the 1.86 Debian package (the upstream affected range ends before 1.84). The 1.86 strict constraints are above those affected ranges and make Gradle resolution fail rather than silently selecting an older version. See [GHSA-4cx2-fc23-5wg6](https://github.com/advisories/GHSA-4cx2-fc23-5wg6), [Debian CVE-2026-5588 tracker](https://security-tracker.debian.org/tracker/CVE-2026-5588), and [Debian CVE-2025-8916 tracker](https://security-tracker.debian.org/tracker/CVE-2025-8916).
+
+This source-level constraint is **not** a substitute for a generated dependency graph/SBOM or a vulnerability scan of the resolved release runtime classpaths. Those remain outstanding. The main app also still declares `play-services-mlkit-text-recognition:19.0.1`; Google's 26 October 2026 release notes list 19.0.2. No security advisory was identified for that version delta in this audit, so it was not changed as an unverified maintenance update. See [Google ML Kit release notes](https://developers.google.com/ml-kit/release-notes).
+
+### Latest build-and-test result
+
+The latest branch run checked was [Build Orbit APK #22](https://github.com/sakib-s-projects/JARVIS-Mobile/actions/runs/45119992038), commit `004bf21e6c5e3bd360eb49ba92119a07bb345d7c`:
+
+- **10,089 tests completed; 9 failed; 42 skipped.**
+- Test reports uploaded successfully as `unit-test-reports-22` (artifact ID `14793123178`, SHA-256 `6d254eb417adcd8f71d6a4b7c2e06a421b7fb5670ac62b8173f916419946ea79`).
+- The failed test step gated the workflow: `Build debug APK` and `Upload debug APK` were skipped. **No APK was produced by this run.**
+
+The nine failures are in five suites:
+
+| Suite | Failures | Observed reason |
+|---|---:|---|
+| `CalendarActionRoutingTest` | 2 | Its source scan treats the unrelated “Added …” success text in `SiteTasksActivity.java` as calendar-event success wording. This appears to be a test-scope false positive, not evidence of an unintended calendar write. |
+| `ComponentInstallHandoffTest` | 2 | Robolectric reports that no package installer is available; the mocked resolver does not reach the expected installer-handoff branch. This is an environment/test-fixture failure, not a demonstrated APK verification bypass. |
+| `OrbitDialogContractTest` | 1 | The test cannot audit an inline delete-task AlertDialog created in `SiteTasksActivity.java:154`. |
+| `OrbitNavigationPolicyTest` | 3 | The manifest does not set `enableOnBackInvokedCallback=true` on `SiteTasksActivity`, although the test classifies it as migrated. |
+| `OrbitVaultStoreTest` | 1 | The 300-item cap retained the collection, but an oldest-first ordering assertion failed when saved items shared the same millisecond timestamp; the tie-breaker is UUID order. The observed failure does not show an item being removed, but oldest-first order is not guaranteed for timestamp ties. |
+
+The focused tests for the previous hardening changes passed in this run: `RelayCredentialSecurityTest` (8), `ProviderCredentialSecurityTest` (8), `HttpConnectionSecurityTest` (1), `ReleaseWorkflowAuditTest` (14), `LastScreenStoreRetentionTest` (4), `PendingRequestRetentionTest` (1), and `RoutineBranchExecutionTest` (48). These passing suites are useful regression evidence, but they do not neutralize the unrelated failing tests or prove the final binary.
+
+### Repository and artifact integrity observations
+
+- GitHub reports `jarvis-branding` as **unprotected** (no required status checks/reviews recorded in branch protection metadata).
+- The checked HEAD commit is reported as **unsigned** by GitHub.
+- `.github/workflows/build-apk.yml` and `.github/workflows/release.yml` still reference Actions by mutable major-version tags rather than full commit SHAs.
+- The only artifact from run #22 is the test-report ZIP. It is not an APK. The earlier debug APK evidence in section 6 is pre-hardening and is signed with the Android debug certificate, not the pinned release certificate.
+
+### Outstanding blockers — do not grant installation clearance
+
+1. **Release/update identity:** `app/src/github/java/com/orbit/assistant/OrbitEdition.java` still points to `lpnovi/Orbit-Assistant`, while this project is the fork `sakib-s-projects/JARVIS-Mobile`. The correct authoritative release owner and signing-key relationship have not been established, so changing this target automatically could silently move users to the wrong update stream.
+2. **Updater redirect policy:** `OrbitUpdater.open()` and `OrbitLocalInstaller.open()` still follow redirects and validate only that the final URL uses HTTPS. An explicit hostname allowlist and bounded redirect policy have not been implemented or tested.
+3. **Extension DNS rebinding:** extension host validation and the subsequent `HttpURLConnection` connection perform separate DNS resolution. The validated address is not pinned to the socket while preserving TLS hostname/SNI checks. No safe transport-level fix has been completed.
+4. **Dependency/SBOM scan:** the exact resolved runtime dependency graphs for `:app` and `:local` have not been exported and scanned; repository dependency graph/SBOM results were not available in the checked workflow.
+5. **Clean build and final APK provenance:** run #22 skipped APK assembly/upload. No final-HEAD release APK was available for independent package, SHA-256, v2/v3 signature, and pinned-certificate inspection.
+6. **Android 10 device validation:** microphone, notification access/retention, camera cleanup, location-trigger permission revocation, updater redirects, and restore behavior have not been dynamically tested on the user's physical Android 10 phone.
+
+**Current decision: NOT INSTALL-READY.** The source review and three local-data/credential hardening changes remain useful, and their focused regression tests passed in run #22. The audit is still incomplete because the updater origin is unresolved, redirect and DNS-pinning protections remain open, the full dependency scan is absent, the test suite is not green, and no final audited APK exists to inspect. Do not install the older debug artifact as a trusted build.
